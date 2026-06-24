@@ -1,0 +1,11 @@
+{
+  "selected": "mag_prior",
+  "oof_grade": 0.7069808470795785,
+  "cfg": {
+    "w": "macroW",
+    "frac": 0.3
+  },
+  "candidates": {
+    "mag_prior": 0.7069808470795785
+  }
+}

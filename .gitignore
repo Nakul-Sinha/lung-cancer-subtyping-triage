@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+dev/kdataset/
+dev/kkernel/
+dev/kout/
+dev/kkernel_*/
+dev/kout_*/
+dev/weights/
+*.zip
+*.npy
+.ipynb_checkpoints/
+*.npz
+working/oof.npz
