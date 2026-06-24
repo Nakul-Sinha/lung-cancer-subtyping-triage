@@ -1,18 +1,3 @@
-"""
-Lung Cancer Subtyping & Grading — official self-contained solution.
-Reads dataset/public (auto-detected), writes ./working/submission.csv.
-
-Design: the score on this metric is dominated by the decision layer, not raw accuracy.
-This pipeline is SELF-CALIBRATING and robust to data quality:
-  1. Always builds a magnification-conditioned class prior (a legitimate test-available covariate).
-  2. If a GPU is present, also fine-tunes an ImageNet backbone (with a magnification covariate).
-  3. On patient-grouped OOF it scores every candidate posterior (prior / vision / blends) with the
-     EXACT competition grader, and keeps whichever maximizes the real metric.
-  4. Converts the chosen calibrated posterior into the Bayes-optimal belief for this (non-proper)
-     metric and adds a budget-aware, expected-harm referral policy.
-So if the images carry signal the vision model wins automatically; if not, it floors on the
-magnification prior — never below a strong post-processing baseline.
-"""
 import os, json, math, random, warnings
 from pathlib import Path
 from math import ceil
@@ -23,12 +8,11 @@ SEED = 42
 random.seed(SEED); np.random.seed(SEED)
 N_SPLITS = int(os.environ.get("N_SPLITS", "5"))
 DISABLE_VISION = os.environ.get("DISABLE_VISION", "0") == "1"
-FORCE_VISION = os.environ.get("FORCE_VISION", "0") == "1"   # run vision path even on CPU (smoke)
+FORCE_VISION = os.environ.get("FORCE_VISION", "0") == "1"
 SMOKE = os.environ.get("SMOKE", "0") == "1"
 WORK = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path("./working")
 WORK.mkdir(exist_ok=True, parents=True)
 
-# ----------------------------- metric / decode (verified gap=0 vs brute force) -----------------------------
 CLASSES = ["nor","aca_bd","aca_md","aca_pd","scc_bd","scc_md","scc_pd"]
 CIDX = {c:i for i,c in enumerate(CLASSES)}; MALIG = np.array([0,1,1,1,1,1,1], bool)
 GAMMA_MISS, GAMMA_FA, S_REF = 1.0, 0.5, 0.40
@@ -71,8 +55,6 @@ def referral_policy(Eh,frac):
     for r,i in enumerate(sel): ref[i]=(1.0-0.45*(r/max(1,len(sel)-1))) if len(sel)>1 else 0.9
     return ref
 def best_decode(Q, y, cnt):
-    """tune {macro-weight exponent, referral-frac} on the exact grader; return (score, cfg, apply).
-    macro-weight (1/cnt)^exp reweights affinity toward rare classes (macro-average aware)."""
     best=(-1,None,None)
     for exp in [0.0,0.5,1.0,1.5,2.0]:
         w = None if exp==0 else (lambda v: v/v.mean())((1.0/np.maximum(cnt,1))**exp)
@@ -85,7 +67,6 @@ def best_decode(Q, y, cnt):
         P,Eh=decode_batch(testQ,wsel); return P, referral_policy(Eh,cfg["frac"])
     return s, cfg, apply
 
-# ----------------------------- data -----------------------------
 def find_data():
     import zipfile
     cands=[Path("./dataset/public"),Path("../dataset/public"),
@@ -110,7 +91,6 @@ def grouped_folds(y, groups, seed=SEED):
     return fold
 
 def prior_oof_and_test(y, magtr, fold, magte, alpha=1.0):
-    """magnification-conditioned class prior via grouped OOF; and test posteriors from full train."""
     oof=np.zeros((len(y),7))
     for f in range(N_SPLITS):
         tri=fold!=f; vai=fold==f
@@ -124,7 +104,6 @@ def prior_oof_and_test(y, magtr, fold, magte, alpha=1.0):
         test[magte==mg]=pr
     return oof, test
 
-# ----------------------------- optional vision model (GPU) -----------------------------
 def vision_oof_and_test(tr, te, y, fold, DATA):
     import torch, torch.nn as nn, torch.nn.functional as F, timm
     from torch.utils.data import Dataset, DataLoader
@@ -213,7 +192,6 @@ def vision_oof_and_test(tr, te, y, fold, DATA):
         oof[vai]=pred(em,tr.iloc[vai]); tests.append(pred(em,te))
         del m,em; torch.cuda.empty_cache()
         print(f"  vision fold{f} val_acc={(oof[vai].argmax(1)==y[vai]).mean():.3f}")
-    # temperature calibration on OOF
     import torch as T2
     lg=T2.tensor(oof,dtype=T2.float32); lb=T2.tensor(y)
     t=T2.nn.Parameter(T2.ones(1)); o=T2.optim.LBFGS([t],lr=0.1,max_iter=60)
@@ -222,7 +200,6 @@ def vision_oof_and_test(tr, te, y, fold, DATA):
     def sm(z,Tt): z=z/Tt; z=z-z.max(1,keepdims=True); e=np.exp(z); return e/e.sum(1,keepdims=True)
     return sm(oof,Tp), sm(np.mean(tests,0),Tp)
 
-# ----------------------------- main -----------------------------
 def main():
     DATA=find_data(); print("DATA:",DATA)
     tr=pd.read_csv(DATA/"train.csv"); te=pd.read_csv(DATA/"test.csv")
@@ -234,7 +211,7 @@ def main():
     cnt=np.bincount(y,minlength=7)
     fold=grouped_folds(y,groups)
 
-    cands={}  # name -> (oofQ, testQ)
+    cands={}
     pr_oof, pr_te = prior_oof_and_test(y,magtr,fold,magte); cands["mag_prior"]=(pr_oof,pr_te)
 
     import torch
@@ -255,8 +232,6 @@ def main():
         acc=(oq.argmax(1)==y).mean(); s,cfg,apply=best_decode(oq,y,cnt)
         print(f"{name:12s} {acc:7.3f} {s:9.4f}  {cfg}")
         scored[name]=(s,cfg,apply)
-    # Robust selection: magnification-prior is the safe default (stable, can't overfit).
-    # Only switch to a learned candidate if it beats the prior by more than CV noise.
     MARGIN=float(os.environ.get("SELECT_MARGIN","0.01"))
     base_s,base_cfg,base_apply=scored["mag_prior"]
     name,(s,cfg,apply)="mag_prior",(base_s,base_cfg,base_apply)
