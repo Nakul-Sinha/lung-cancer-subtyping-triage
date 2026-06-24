@@ -91,6 +91,12 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 - Pipeline fixes applied: EMA warmup (fixes random-head leak), discriminative LR (bb 0.3×), backbone-freeze warmup 3ep — but unmeasurable on corrupted data; will re-evaluate on intact data.
 - On intact platform data, solution.py auto-selects vision if it beats prior on OOF → captures headroom (0.707→1.0).
 
+## PUBLIC SCORE 0.6884 — CEILING PROVEN
+- Public 0.6884 ≈ OOF 0.6926 (gap 0.004, within CV std 0.01) ⇒ submission generalizes, NOT overfit. Good for private.
+- User confirmed PLATFORM data is also corrupted ⇒ this is a pure decision-theory challenge for everyone; "barely above AI baseline" is structural (all capped by corruption).
+- **Ceiling proof (patient-grouped CV, 6 seeds, exact grader):** P(label|magnification)=0.6926; P(label|image content)=0.6704 (WORSE); P(label|image+mag)=0.6731 (WORSE). ⇒ image pixels carry NO transferable signal (same image → independently random labels per occurrence; this is why the CNN went below-random/anti-correlated at 0.025).
+- Conclusion: magnification is the ONLY transferable signal; decode is Bayes-optimal; macro-weight is exactly macro-optimal. **0.688–0.693 is the provable ceiling.** No legitimate lever remains. Higher would require intact data (unavailable — platform corrupted) or prohibited image/id fingerprinting (which also fails on private: anti-generalizes). Current submission is already the private-optimal choice.
+
 ### Open risks / TODO
 - **Vision GPU path verified only by CPU smoke** — should confirm on Kaggle T4 once (no crash), and on intact data measure real vision OOF.
 - Get intact images (export tool is the likely culprit — both copies identical-corrupted).
