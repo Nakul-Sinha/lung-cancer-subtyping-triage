@@ -1,11 +1,10 @@
 {
-  "selected": "mag_prior",
-  "oof_grade": 0.7077128732233694,
-  "cfg": {
+  "oof_score": 0.7220719718613563,
+  "config": {
     "exp": 1.0,
     "frac": 0.4
   },
-  "candidates": {
-    "mag_prior": 0.7077128732233694
-  }
+  "alpha": 0.3,
+  "n_seeds": 10,
+  "n_referred_flagged": 88
 }

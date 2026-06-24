@@ -97,6 +97,15 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 - **Ceiling proof (patient-grouped CV, 6 seeds, exact grader):** P(label|magnification)=0.6926; P(label|image content)=0.6704 (WORSE); P(label|image+mag)=0.6731 (WORSE). ⇒ image pixels carry NO transferable signal (same image → independently random labels per occurrence; this is why the CNN went below-random/anti-correlated at 0.025).
 - Conclusion: magnification is the ONLY transferable signal; decode is Bayes-optimal; macro-weight is exactly macro-optimal. **0.688–0.693 is the provable ceiling.** No legitimate lever remains. Higher would require intact data (unavailable — platform corrupted) or prohibited image/id fingerprinting (which also fails on private: anti-generalizes). Current submission is already the private-optimal choice.
 
+## FINALIZED (shared-pool) — solution.py v2
+- Org confirmed dataset stays as-is (duplicated, one pool); others score ~0.72.
+- KEY: same magnification approach scores **0.6915 under patient-GROUPED CV but 0.7221 under shared-pool (random) CV**. The 0.72 is just the shared-pool regime. My earlier 0.6884 used grouped-CV framing (too pessimistic for a shared pool).
+- Exhaustive proof magnification is optimal: image-content lookup 0.695, blends ≤0.722, id-hash random — nothing beats magnification under shared-pool CV.
+- Finalized solution.py: magnification-conditioned prior (alpha=0.3) + Bayes decode (macro-exp=1.0) + cap-aware referral (frac=0.4, plateau ≥0.4) tuned on **shared-pool StratifiedKFold** (10 seeds). Vision path removed (images proven uninformative). Comment-free, deterministic, CPU-fast.
+- **Shared-pool OOF = 0.7221.** Submission: 219 rows valid, 88 flagged (grader refers K=43).
+- "Perfect bias point" = magnification class-distribution (stable across every pool sample → lifts public AND private equally, no overfit) + referral frac=0.4. Already at it.
+- Next: user resubmits this file. If →~0.72 the test is shared-pool (holds on private, same pool); if stays ~0.69 the test holds out patients and 0.69 is honest (others overfitting public).
+
 ### Open risks / TODO
 - **Vision GPU path verified only by CPU smoke** — should confirm on Kaggle T4 once (no crash), and on intact data measure real vision OOF.
 - Get intact images (export tool is the likely culprit — both copies identical-corrupted).
