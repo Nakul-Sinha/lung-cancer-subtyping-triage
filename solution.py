@@ -248,13 +248,20 @@ def main():
         print("no GPU (or disabled) -> magnification-prior path only")
 
     print(f"\n{'candidate':12s} {'val_acc':>7} {'OOF_grade':>9}  cfg")
-    best=(-1,None,None,None)
+    scored={}
     for name,(oq,tq) in cands.items():
         acc=(oq.argmax(1)==y).mean(); s,cfg,apply=best_decode(oq,y,w_macro)
         print(f"{name:12s} {acc:7.3f} {s:9.4f}  {cfg}")
-        if s>best[0]: best=(s,name,apply,(cfg))
-    s,name,apply,cfg=best
-    print(f"\nSELECTED: {name}  OOF_grade={s:.4f}  {cfg}")
+        scored[name]=(s,cfg,apply)
+    # Robust selection: magnification-prior is the safe default (stable, can't overfit).
+    # Only switch to a learned candidate if it beats the prior by more than CV noise.
+    MARGIN=float(os.environ.get("SELECT_MARGIN","0.01"))
+    base_s,base_cfg,base_apply=scored["mag_prior"]
+    name,(s,cfg,apply)="mag_prior",(base_s,base_cfg,base_apply)
+    for cand in [c for c in scored if c!="mag_prior"]:
+        cs,ccfg,capply=scored[cand]
+        if cs>s+MARGIN: name,(s,cfg,apply)=cand,(cs,ccfg,capply)
+    print(f"\nSELECTED: {name}  OOF_grade={s:.4f}  {cfg}  (prior={base_s:.4f}, margin={MARGIN})")
 
     P,ref=apply(cands[name][1])
     sub=pd.DataFrame({"id":te["id"]})
