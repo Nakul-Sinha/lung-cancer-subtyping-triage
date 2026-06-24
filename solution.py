@@ -70,18 +70,20 @@ def referral_policy(Eh,frac):
     k=int(round(frac*N)); ref=np.zeros(N); sel=[i for i in order[:k] if upl[i]>0]
     for r,i in enumerate(sel): ref[i]=(1.0-0.45*(r/max(1,len(sel)-1))) if len(sel)>1 else 0.9
     return ref
-def best_decode(Q, y, w_macro):
-    """tune {macro-weight, referral-frac} on the exact grader; return (score, fn(testQ)->(P,ref))."""
-    best=(-1,None)
-    for w,wn in [(None,"none"),(w_macro,"macroW")]:
+def best_decode(Q, y, cnt):
+    """tune {macro-weight exponent, referral-frac} on the exact grader; return (score, cfg, apply).
+    macro-weight (1/cnt)^exp reweights affinity toward rare classes (macro-average aware)."""
+    best=(-1,None,None)
+    for exp in [0.0,0.5,1.0,1.5,2.0]:
+        w = None if exp==0 else (lambda v: v/v.mean())((1.0/np.maximum(cnt,1))**exp)
         P,Eh=decode_batch(Q,w)
-        for fr in [0,.05,.1,.15,.2,.25,.3,.35]:
+        for fr in [0,.1,.15,.2,.25,.3,.35,.4]:
             s=exact_grade(P,referral_policy(Eh,fr),y)
-            if s>best[0]: best=(s,dict(w=wn,frac=fr))
-    cfg=best[1]; wsel = w_macro if cfg["w"]=="macroW" else None
+            if s>best[0]: best=(s,dict(exp=exp,frac=fr),w)
+    s,cfg,wsel=best
     def apply(testQ):
         P,Eh=decode_batch(testQ,wsel); return P, referral_policy(Eh,cfg["frac"])
-    return best[0], cfg, apply
+    return s, cfg, apply
 
 # ----------------------------- data -----------------------------
 def find_data():
@@ -107,7 +109,7 @@ def grouped_folds(y, groups, seed=SEED):
     for f,(_,vai) in enumerate(sgkf.split(np.zeros(len(y)),y,groups)): fold[vai]=f
     return fold
 
-def prior_oof_and_test(y, magtr, fold, magte, alpha=0.5):
+def prior_oof_and_test(y, magtr, fold, magte, alpha=1.0):
     """magnification-conditioned class prior via grouped OOF; and test posteriors from full train."""
     oof=np.zeros((len(y),7))
     for f in range(N_SPLITS):
@@ -229,7 +231,7 @@ def main():
         os.environ["EPOCHS"]="1"; globals()["N_SPLITS"]=2
     y=tr["label"].map(CIDX).values; groups=tr["patient_id"].values
     magtr=np.array([mag_bin(s) for s in tr["magnification"]]); magte=np.array([mag_bin(s) for s in te["magnification"]])
-    cnt=np.bincount(y,minlength=7); w_macro=(1.0/np.maximum(cnt,1)); w_macro/=w_macro.mean()
+    cnt=np.bincount(y,minlength=7)
     fold=grouped_folds(y,groups)
 
     cands={}  # name -> (oofQ, testQ)
@@ -250,7 +252,7 @@ def main():
     print(f"\n{'candidate':12s} {'val_acc':>7} {'OOF_grade':>9}  cfg")
     scored={}
     for name,(oq,tq) in cands.items():
-        acc=(oq.argmax(1)==y).mean(); s,cfg,apply=best_decode(oq,y,w_macro)
+        acc=(oq.argmax(1)==y).mean(); s,cfg,apply=best_decode(oq,y,cnt)
         print(f"{name:12s} {acc:7.3f} {s:9.4f}  {cfg}")
         scored[name]=(s,cfg,apply)
     # Robust selection: magnification-prior is the safe default (stable, can't overfit).
@@ -268,7 +270,7 @@ def main():
     for j,c in enumerate(CLASSES): sub["p_"+c]=P[:,j]
     sub["referral"]=ref
     sub.to_csv(WORK/"submission.csv",index=False)
-    json.dump({"selected":name,"oof_grade":s,"cfg":cfg,"candidates":{k:float(best_decode(v[0],y,w_macro)[0]) for k,v in cands.items()}},
+    json.dump({"selected":name,"oof_grade":s,"cfg":cfg,"candidates":{k:float(best_decode(v[0],y,cnt)[0]) for k,v in cands.items()}},
               open(WORK/"oof_metrics.json","w"),indent=2)
     print("wrote",WORK/"submission.csv",sub.shape)
 

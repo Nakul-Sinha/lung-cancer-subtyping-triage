@@ -86,7 +86,7 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 ## ITERATION 1 (committed) — robust self-calibrating solution.py
 - Data still corrupted (user re-provided same data at `eris/lung-cancer-dataset/`, verified identical: 134 unique/691). Building robust solution that works either way.
 - `solution.py`: mag-conditioned prior (always) + vision fine-tune (GPU only) + blends → self-selects best on patient-grouped OOF exact grader → Bayes decode + referral. CPU path & GPU vision path both smoke-verified.
-- **OOF results (patient-grouped, exact grader): mag_prior+decode+referral = 0.7070** (selected); flat prior 0.687; sample-sub anchor 0.6776; perfect ceiling 1.0.
+- **OOF results (patient-grouped, exact grader): single-seed 0.708; HONEST repeated 8×5-CV = 0.692 ± 0.011** (mag_prior+decode+referral, robust config exp=1.0 frac=0.4); flat prior ~0.682; sample-sub anchor 0.6776; perfect ceiling 1.0. Magnification is the only legit signal ⇒ ~0.692 is the Bayes ceiling on corrupted data (user chose to squeeze it; `dev/squeeze.py`).
 - Submission: 219 rows valid (66 flagged @ frac 0.3, grader caps at K=43).
 - Pipeline fixes applied: EMA warmup (fixes random-head leak), discriminative LR (bb 0.3×), backbone-freeze warmup 3ep — but unmeasurable on corrupted data; will re-evaluate on intact data.
 - On intact platform data, solution.py auto-selects vision if it beats prior on OOF → captures headroom (0.707→1.0).
