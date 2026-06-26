@@ -6,8 +6,8 @@ Lung Cancer Subtyping & Grading
 Overview
 You are building the triage model for a digital-pathology lab. Given a single hematoxylin-and-eosin (H&E) tissue patch cropped from a lung whole-slide image, your model must do two things at once:
 
-Diagnose — output a belief distribution over seven diagnostic classes (how much probability you place on each; the seven must sum to 1).
-Triage — output a referral score saying how badly this patch needs a senior pathologist's review.
+Diagnose, output a belief distribution over seven diagnostic classes (how much probability you place on each; the seven must sum to 1).
+Triage, output a referral score saying how badly this patch needs a senior pathologist's review.
 The lab has limited specialist capacity: only a fixed fraction of cases can be escalated. An escalated patch is resolved by the specialist (it receives a fixed score) but consumes scarce expert time; an auto-reported patch is scored on its diagnostic harm, where a confident mistake on the wrong side of the cancer boundary is heavily penalized.
 
 The seven classes form a clinical hierarchy, and scoring follows that hierarchy rather than treating the classes as flat and interchangeable:
@@ -21,10 +21,10 @@ The seven classes form a clinical hierarchy, and scoring follows that hierarchy 
                   bd < md < pd       bd < md < pd      ← ordinal differentiation grade  
 ```
 
-Tier 1 — triage: benign normal tissue (nor) vs. malignant carcinoma. Confusing the two is the clinically decisive error — a missed cancer (auto-reporting a malignant patch as normal) is the worst outcome; a false alarm is penalized too, but less.
-Tier 2 — subtype: among malignant patches, adenocarcinoma (aca) vs. squamous cell carcinoma (scc) — these drive different treatments.
-Tier 3 — differentiation grade: an ordinal severity axis within each subtype — well-differentiated (bd), moderately (md), poorly (pd). Grade is the hardest, most subjective axis; the metric awards partial credit for being off by one grade and less for two.
-Three things make this hard. First, data is scarce — under ~500 training patches. Second, the train/test split is patient-stratified: the patients in the training set never appear in the test set, so test scores reflect generalization across patients, staining, and morphology rather than memorization. Third, the score is a joint function of the belief distribution and the referral signal — both are part of every submission and both affect the result.
+Tier 1, triage: benign normal tissue (nor) vs. malignant carcinoma. Confusing the two is the clinically decisive error, a missed cancer (auto-reporting a malignant patch as normal) is the worst outcome; a false alarm is penalized too, but less.
+Tier 2, subtype: among malignant patches, adenocarcinoma (aca) vs. squamous cell carcinoma (scc), these drive different treatments.
+Tier 3, differentiation grade: an ordinal severity axis within each subtype, well-differentiated (bd), moderately (md), poorly (pd). Grade is the hardest, most subjective axis; the metric awards partial credit for being off by one grade and less for two.
+Three things make this hard. First, data is scarce, under ~500 training patches. Second, the train/test split is patient-stratified: the patients in the training set never appear in the test set, so test scores reflect generalization across patients, staining, and morphology rather than memorization. Third, the score is a joint function of the belief distribution and the referral signal, both are part of every submission and both affect the result.
 
 Compute budget: training and inference must complete on a single A10G GPU (24 GB) within 30 minutes.
 
@@ -85,13 +85,13 @@ img_8b3e0d61aa9c4f72,img_8b3e0d61aa9c4f72.jpg,20x
 Evaluation
 Submissions are scored with a referral-gated hierarchical clinical-harm score, macro-averaged over the seven true classes. Higher is better.
 
-Step 1 — referral allocation. Referral is opt-in and capped. The total referral budget is K = int(0.20 · N) where N is the number of test patches in the ground-truth set being scored (derived from the ground-truth dictionary, not the submission row count). A patch is eligible for escalation only if its referral score exceeds REFERRAL_THRESHOLD = 0.5. Among eligible patches, sorted by descending referral score (ties broken by id ascending), patches are referred subject to a per-ground-truth-class cap of max(1, ceil(K / 7)). Since participants do not know the true class of test patches, this cap cannot be gamed; it prevents any single class from being disproportionately referred, which would distort the macro-average. Once K total referrals are reached or all eligible patches are processed, everything else is auto-reported. A submission with every referral at or below 0.5 escalates nothing.
+Step 1, referral allocation. Referral is opt-in and capped. The total referral budget is K = int(0.20 · N) where N is the number of test patches in the ground-truth set being scored (derived from the ground-truth dictionary, not the submission row count). A patch is eligible for escalation only if its referral score exceeds REFERRAL_THRESHOLD = 0.5. Among eligible patches, sorted by descending referral score (ties broken by id ascending), patches are referred subject to a per-ground-truth-class cap of max(1, ceil(K / 7)). Since participants do not know the true class of test patches, this cap cannot be gamed; it prevents any single class from being disproportionately referred, which would distort the macro-average. Once K total referrals are reached or all eligible patches are processed, everything else is auto-reported. A submission with every referral at or below 0.5 escalates nothing.
 
-Step 2 — per-patch score.
+Step 2, per-patch score.
 
 A referred patch scores a flat S_REF = 0.40, modelling a case the specialist resolves correctly (≈ +1.0) net of the cost of expert time.
 An auto-reported patch scores the hierarchical clinical-harm value below, with two terms.
-Term 1 — hierarchical affinity reward (expected, hierarchy-weighted agreement between belief and truth):
+Term 1, hierarchical affinity reward (expected, hierarchy-weighted agreement between belief and truth):
 
 Relation of predicted class k to the true class t	affinity w(t, k)
 exact class	+1.0
@@ -99,10 +99,10 @@ same subtype, differentiation grade off by 1 (e.g. aca_md ↔ aca_bd)	+0.5
 same subtype, differentiation grade off by 2 (bd ↔ pd)	+0.2
 both malignant but wrong subtype (aca ↔ scc)	0.0
 crosses the benign ↔ malignant boundary	−1.0
-Term 2 — convex, asymmetric triage gate (penalizes confident wrong-side belief, accelerating quadratically):
+Term 2, convex, asymmetric triage gate (penalizes confident wrong-side belief, accelerating quadratically):
 
-if t is malignant: penalty = GAMMA_MISS · (p_nor)² — mass on "normal" when the patch is cancer (missed diagnosis).
-if t is benign (nor): penalty = GAMMA_FA · (Σ malignant p)² — mass on cancer when the patch is normal (false alarm).
+if t is malignant: penalty = GAMMA_MISS · (p_nor)², mass on "normal" when the patch is cancer (missed diagnosis).
+if t is benign (nor): penalty = GAMMA_FA · (Σ malignant p)², mass on cancer when the patch is normal (false alarm).
 GAMMA_MISS = 1.0 and GAMMA_FA = 0.5: a confident missed cancer is penalized twice as hard as a confident false alarm.
 
 CLASSES = ["nor", "aca_bd", "aca_md", "aca_pd", "scc_bd", "scc_md", "scc_pd"]  
