@@ -111,7 +111,7 @@ def tune_frac_and_score(Q, gt, grid=FRAC_GRID, w=None):
 def find_data():
     import zipfile
     cands = [Path("./dataset/public"), Path("../dataset/public"),
-             Path("G:/Datacurve/eris/runnerloaddataset/public")]
+             Path("G:/ml/data/runnerloaddataset/public")]
     if Path("/kaggle/input").exists():
         cands += sorted(Path("/kaggle/input").glob("*"))
         cands += sorted(Path("/kaggle/input").glob("*/*"))

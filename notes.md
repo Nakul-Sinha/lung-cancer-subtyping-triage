@@ -9,7 +9,7 @@
 - **Only 30 train patients** (patient_id 2–45); test patients disjoint (~15). Patches/patient: 2–51 (median 10).
 - 9/30 patients have >1 label; 7 have >1 superclass; 20/30 span both magnifications.
 - Magnification near-balanced: train 241/231 (20x/40x), test 118/101.
-- Data location (local): `eris/runnerloaddataset/public/` (misnamed folder). Cols: id,image,magnification,patient_id,superclass,subclass,label.
+- Data location (local): `data/runnerloaddataset/public/` (misnamed folder). Cols: id,image,magnification,patient_id,superclass,subclass,label.
 
 ## Metric (FULLY SPECIFIED — this is the key lever)
 Submit per test patch: 7 probs (sum→1, ±0.02 renorm) + `referral`∈[0,1].
@@ -84,7 +84,7 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 - All infra (exact grader, StratifiedGroupKFold, Bayes decoder, referral, Kaggle pipeline) is built & verified — only correct pixels are missing.
 
 ## ITERATION 1 (committed) — robust self-calibrating solution.py
-- Data still corrupted (user re-provided same data at `eris/lung-cancer-dataset/`, verified identical: 134 unique/691). Building robust solution that works either way.
+- Data still corrupted (user re-provided same data at `data/lung-cancer-dataset/`, verified identical: 134 unique/691). Building robust solution that works either way.
 - `solution.py`: mag-conditioned prior (always) + vision fine-tune (GPU only) + blends → self-selects best on patient-grouped OOF exact grader → Bayes decode + referral. CPU path & GPU vision path both smoke-verified.
 - **OOF results (patient-grouped, exact grader): single-seed 0.708; HONEST repeated 8×5-CV = 0.692 ± 0.011** (mag_prior+decode+referral, robust config exp=1.0 frac=0.4); flat prior ~0.682; sample-sub anchor 0.6776; perfect ceiling 1.0. Magnification is the only legit signal ⇒ ~0.692 is the Bayes ceiling on corrupted data (user chose to squeeze it; `dev/squeeze.py`).
 - Submission: 219 rows valid (66 flagged @ frac 0.3, grader caps at K=43).
@@ -115,7 +115,7 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 ### Open risks / TODO
 - **Vision GPU path verified only by CPU smoke** — should confirm on Kaggle T4 once (no crash), and on intact data measure real vision OOF.
 - Get intact images (export tool is the likely culprit — both copies identical-corrupted).
-- **Offline weights for official A10G run**: if Eris runtime has NO internet, timm can't download convnext weights → must stage weights as packaged asset. Confirm whether Eris A10G has internet. (Dev on Kaggle uses internet.)
+- **Offline weights for official A10G run**: if grading runtime has NO internet, timm can't download convnext weights → must stage weights as packaged asset. Confirm whether the platform A10G has internet. (Dev on Kaggle uses internet.)
 - Official 30-min A10G budget: measure 5-fold×28ep timing on T4 (A10G ~1.5-2× faster); reduce folds/epochs if needed.
 - Decode currently emits ~one-hot beliefs (theoretical optimum); test concentrate-vs-tempered on real OOF (robustness under imperfect calibration).
 - Train/test view mismatch (train RandomResizedCrop vs test full-resize) — standard, revisit if OOF poor.

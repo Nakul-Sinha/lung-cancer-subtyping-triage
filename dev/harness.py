@@ -26,7 +26,7 @@ REFERRAL_THRESHOLD = 0.5
 HARM_FLOOR, HARM_CEIL = -2.0, 1.0
 SCORE_FLOOR = 0.02
 
-DATA = Path("G:/Datacurve/eris/runnerloaddataset/public")
+DATA = Path("G:/ml/data/runnerloaddataset/public")
 
 
 # ----------------------------- affinity / harm -----------------------------

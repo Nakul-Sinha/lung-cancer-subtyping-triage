@@ -71,7 +71,7 @@ def macro_weight(exp, cnt):
 
 def find_data():
     cands=[Path("./dataset/public"),Path("../dataset/public"),
-           Path("G:/Datacurve/eris/lung-cancer-dataset"),Path("G:/Datacurve/eris/runnerloaddataset/public")]
+           Path("G:/ml/data/lung-cancer-dataset"),Path("G:/ml/data/runnerloaddataset/public")]
     if Path("/kaggle/input").exists():
         cands+=sorted(Path("/kaggle/input").glob("*")); cands+=sorted(Path("/kaggle/input").glob("*/*"))
     for c in cands:

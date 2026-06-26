@@ -11,7 +11,7 @@ def validate(sub_path="working/submission.csv", sample_path=None, data_dir=None)
     assert set(COLS) == set(sub.columns), f"columns mismatch: {sub.columns.tolist()}"
     # test ids
     if data_dir is None:
-        for c in [Path("dataset/public"), Path("G:/Datacurve/eris/runnerloaddataset/public")]:
+        for c in [Path("dataset/public"), Path("G:/ml/data/runnerloaddataset/public")]:
             if (c/"test.csv").exists(): data_dir=c; break
     te = pd.read_csv(Path(data_dir)/"test.csv")
     assert len(sub)==len(te), f"row count {len(sub)} != test {len(te)}"

@@ -5,7 +5,7 @@ import sys, hashlib
 from pathlib import Path
 import pandas as pd
 
-D = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("G:/Datacurve/eris/runnerloaddataset/public")
+D = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("G:/ml/data/runnerloaddataset/public")
 tr = pd.read_csv(D/"train.csv"); te = pd.read_csv(D/"test.csv")
 def h(im): return hashlib.md5((D/"images"/im).read_bytes()).hexdigest()
 tr["h"] = tr["image"].map(h); te["h"] = te["image"].map(h)

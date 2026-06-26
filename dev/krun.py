@@ -1,4 +1,4 @@
-"""Headless Kaggle T4 driver for the lung-cancer solution (adapted from eris/kaggle_run).
+"""Headless Kaggle T4 driver for the lung-cancer solution (adapted from data/kaggle_run).
   python dev/krun.py dataset   # zip public data -> create/version private Kaggle dataset
   python dev/krun.py push      # push the GPU script kernel (train.py)
   python dev/krun.py status    # poll kernel status
@@ -8,7 +8,7 @@ import json, shutil, sys, zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DATA_DIR = Path("G:/Datacurve/eris/runnerloaddataset/public")
+DATA_DIR = Path("G:/ml/data/runnerloaddataset/public")
 STAGE = HERE/"kdataset"
 SRC = HERE/"train.py"
 import os

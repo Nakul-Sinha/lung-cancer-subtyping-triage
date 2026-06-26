@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import CLASSES, CIDX, A, exact_grade, decode_belief, harm_score, referral_from_expected_harm
 
-D = Path("G:/Datacurve/eris/lung-cancer-dataset")
+D = Path("G:/ml/data/lung-cancer-dataset")
 tr = pd.read_csv(D/"train.csv"); te = pd.read_csv(D/"test.csv")
 y = tr["label"].map(CIDX).values
 magtr = (tr["magnification"].astype(str).str.startswith("40")).astype(int).values

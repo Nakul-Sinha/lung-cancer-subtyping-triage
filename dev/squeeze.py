@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import CLASSES, CIDX, exact_grade, decode_belief, harm_score, referral_from_expected_harm
 from sklearn.model_selection import StratifiedGroupKFold
 
-D = Path("G:/Datacurve/eris/lung-cancer-dataset")
+D = Path("G:/ml/data/lung-cancer-dataset")
 tr = pd.read_csv(D/"train.csv"); y = tr["label"].map(CIDX).values; groups = tr["patient_id"].values
 mag = (tr["magnification"].astype(str).str.startswith("40")).astype(int).values
 cnt_all = np.bincount(y, minlength=7)

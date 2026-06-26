@@ -12,7 +12,7 @@ from sklearn.linear_model import LogisticRegression
 import sys; sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import CLASSES, CIDX, exact_grade, decode_belief, harm_score, referral_from_expected_harm
 
-DATA = Path("G:/Datacurve/eris/runnerloaddataset/public")
+DATA = Path("G:/ml/data/runnerloaddataset/public")
 BACKBONE = os.environ.get("BACKBONE","convnext_tiny.fb_in22k_ft_in1k")
 CACHE = Path("dev/feat_cache"); CACHE.mkdir(parents=True, exist_ok=True)
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
