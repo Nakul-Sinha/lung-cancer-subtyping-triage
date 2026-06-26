@@ -9,6 +9,8 @@ np.random.seed(SEED)
 N_SPLITS = int(os.environ.get("N_SPLITS", "5"))
 N_SEEDS = int(os.environ.get("N_SEEDS", "10"))
 ALPHA = float(os.environ.get("ALPHA", "0.3"))
+EXP = float(os.environ.get("EXP", "1.0"))
+FRAC = float(os.environ.get("FRAC", "0.4"))
 WORK = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path("./working")
 WORK.mkdir(exist_ok=True, parents=True)
 
@@ -88,43 +90,40 @@ def magnification_prior(y_tr, mag_tr, mag_target):
         out[mag_target==mg]=pr
     return out
 
-def oof_posteriors(y, mag, seed):
-    from sklearn.model_selection import StratifiedKFold
+def oof_posteriors(y, mag, groups, seed):
+    from sklearn.model_selection import StratifiedGroupKFold
     oof=np.zeros((len(y),7))
-    for tri,vai in StratifiedKFold(N_SPLITS,shuffle=True,random_state=seed).split(np.zeros(len(y)),y):
+    for tri,vai in StratifiedGroupKFold(N_SPLITS,shuffle=True,random_state=seed).split(np.zeros(len(y)),y,groups):
         oof[vai]=magnification_prior(y[tri], mag[tri], mag[vai])
     return oof
 
-def tune_config(y, mag, cnt):
-    oofs=[oof_posteriors(y, mag, sd) for sd in range(N_SEEDS)]
-    best=(-1,None)
-    for exp in [0.0,0.5,1.0,1.5,2.0]:
-        w=macro_weight(exp,cnt)
-        decoded=[decode_batch(o,w) for o in oofs]
-        for frac in [0.0,0.2,0.3,0.4,0.5,0.6]:
-            sc=np.mean([exact_grade(P,referral_policy(Eh,frac),y) for P,Eh in decoded])
-            if sc>best[0]: best=(sc,dict(exp=exp,frac=frac))
-    return best
+def grouped_oof_score(y, mag, groups, cnt):
+    w=macro_weight(EXP,cnt); sc=[]
+    for sd in range(N_SEEDS):
+        oof=oof_posteriors(y, mag, groups, sd)
+        P,Eh=decode_batch(oof,w); sc.append(exact_grade(P,referral_policy(Eh,FRAC),y))
+    return float(np.mean(sc)), float(np.std(sc))
 
 def main():
     DATA=find_data(); print("DATA:",DATA)
     tr=pd.read_csv(DATA/"train.csv"); te=pd.read_csv(DATA/"test.csv")
     y=tr["label"].map(CIDX).values
+    groups=tr["patient_id"].values if "patient_id" in tr.columns else np.arange(len(y))
     mag_tr=np.array([mag_bin(s) for s in tr["magnification"]])
     mag_te=np.array([mag_bin(s) for s in te["magnification"]])
     cnt=np.bincount(y,minlength=7)
 
-    score,cfg=tune_config(y, mag_tr, cnt)
-    print(f"shared-pool OOF={score:.4f}  config={cfg}")
+    score,std=grouped_oof_score(y, mag_tr, groups, cnt)
+    print(f"patient-grouped OOF={score:.4f} +/- {std:.4f}  (exp={EXP}, frac={FRAC}, alpha={ALPHA})")
 
-    w=macro_weight(cfg["exp"],cnt)
+    w=macro_weight(EXP,cnt)
     teQ=magnification_prior(y, mag_tr, mag_te)
-    P,Eh=decode_batch(teQ,w); ref=referral_policy(Eh,cfg["frac"])
+    P,Eh=decode_batch(teQ,w); ref=referral_policy(Eh,FRAC)
     sub=pd.DataFrame({"id":te["id"]})
     for j,c in enumerate(CLASSES): sub["p_"+c]=P[:,j]
     sub["referral"]=ref
     sub.to_csv(WORK/"submission.csv",index=False)
-    json.dump({"oof_score":score,"config":cfg,"alpha":ALPHA,"n_seeds":N_SEEDS,
+    json.dump({"oof_score":score,"oof_std":std,"exp":EXP,"frac":FRAC,"alpha":ALPHA,"n_seeds":N_SEEDS,
                "n_referred_flagged":int((ref>0.5).sum())}, open(WORK/"oof_metrics.json","w"), indent=2)
     print("wrote",WORK/"submission.csv",sub.shape)
 

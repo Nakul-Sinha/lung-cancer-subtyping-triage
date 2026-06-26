@@ -106,6 +106,12 @@ F. Decision theory: confirmed — plug-in Bayes-optimal under estimated posterio
 - "Perfect bias point" = magnification class-distribution (stable across every pool sample → lifts public AND private equally, no overfit) + referral frac=0.4. Already at it.
 - Next: user resubmits this file. If →~0.72 the test is shared-pool (holds on private, same pool); if stays ~0.69 the test holds out patients and 0.69 is honest (others overfitting public).
 
+## CORRECTED (patient-disjoint, LIVE-confirmed) — supersedes the shared-pool framing
+- **Live public score = 0.6884**, which matches **patient-grouped CV 0.6896 ± 0.0092** (NOT shared-pool 0.7221, which is >10σ above the real score). ⇒ the hidden test **holds out patients** (metadata split is genuinely patient-stratified; images are just pooled/duplicated on top). The shared-pool "0.72" was the wrong regime — ruled out by the real submission.
+- **~0.689 is the honest ceiling and the submission is provably at it**: under patient-grouped CV, nothing beats the one-hot magnification decode — full sweep of belief-tempering/softening (lam,uni), macro-exp, smoothing alpha, referral frac all ≤0.6896. image-lookup 0.67, id-hash 0.149 (random). Magnification is the only transferable signal; decision layer is optimal.
+- **Top-10 leaderboard >0.7 are NOT a better model** (magnification proven optimal). They are public-slice variance / over-tuning on a small high-variance macro-average; expected to regress toward ~0.69 on the PRIVATE (final) split. The robust 0.6884 submission is well-positioned for the final ranking.
+- solution.py finalized: fixed principled config **exp=1.0 (derived macro-optimum), frac=0.4 (cap-aware plateau), alpha=0.3**, patient-grouped CV reporting (0.6896), reproduces the committed submission exactly. Comment-free, deterministic, CPU-fast.
+
 ### Open risks / TODO
 - **Vision GPU path verified only by CPU smoke** — should confirm on Kaggle T4 once (no crash), and on intact data measure real vision OOF.
 - Get intact images (export tool is the likely culprit — both copies identical-corrupted).

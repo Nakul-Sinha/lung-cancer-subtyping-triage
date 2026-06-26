@@ -1,9 +1,8 @@
 {
-  "oof_score": 0.7220719718613563,
-  "config": {
-    "exp": 1.0,
-    "frac": 0.4
-  },
+  "oof_score": 0.6896020587995327,
+  "oof_std": 0.009150582817302376,
+  "exp": 1.0,
+  "frac": 0.4,
   "alpha": 0.3,
   "n_seeds": 10,
   "n_referred_flagged": 88
